@@ -15,6 +15,7 @@ import { Input } from '@/components/ui/input';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
 import ImageUpload from './ImageUpload';
+import { Eye, EyeOff } from 'lucide-react';
 
 interface AddUserDialogProps {
     open: boolean;
@@ -68,54 +69,54 @@ export default function AddUserDialog({
 
     return (
         <Dialog open={open} onOpenChange={onOpenChange}>
-            <DialogContent className="sm:max-w-[500px]">
-                <form onSubmit={handleSubmit}>
-                    <DialogHeader>
-                        <DialogTitle>Add new user</DialogTitle>
-                        <DialogDescription>
-                            Add a new user to your team and set their permissions.
-                        </DialogDescription>
-                    </DialogHeader>
-                    <div className="grid gap-4 py-4">
+            <DialogContent className="dialog-content">
+                <DialogHeader>
+                    <DialogTitle className="text-xl font-heading">Add New User</DialogTitle>
+                    <DialogDescription>Create a new user account with custom permissions</DialogDescription>
+                </DialogHeader>
+                <div className="space-y-6">
+                    <div className="flex flex-col items-center space-y-4">
                         <ImageUpload
-                            onImageSelected={(url: string) => setFormData({ ...formData, avatar: url })}
-                            currentImage={formData.avatar}
+                            onImageSelected={(imageUrl: string) => {
+                                setFormData({ ...formData, avatar: imageUrl });
+                            }}
                         />
-                        <div className="grid gap-2">
+                    </div>
+
+                    <div className="space-y-4">
+                        <div>
                             <Label htmlFor="name">Name</Label>
                             <Input
                                 id="name"
                                 value={formData.name}
-                                onChange={(e) =>
-                                    setFormData({ ...formData, name: e.target.value })
-                                }
-                                required
+                                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                                className="input"
+                                placeholder="Enter user's full name"
                             />
                         </div>
-                        <div className="grid gap-2">
+
+                        <div>
                             <Label htmlFor="email">Email</Label>
                             <Input
                                 id="email"
                                 type="email"
                                 value={formData.email}
-                                onChange={(e) =>
-                                    setFormData({ ...formData, email: e.target.value })
-                                }
-                                required
+                                onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                                className="input"
+                                placeholder="Enter user's email address"
                             />
                         </div>
-                        <div className="grid gap-2">
+
+                        <div>
                             <Label htmlFor="password">Password</Label>
                             <div className="relative">
                                 <Input
                                     id="password"
                                     type={showPassword ? "text" : "password"}
                                     value={formData.password}
-                                    onChange={(e) =>
-                                        setFormData({ ...formData, password: e.target.value })
-                                    }
-                                    required
-                                    className="pr-24"
+                                    onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                                    className="input pr-10"
+                                    placeholder="Enter a secure password"
                                 />
                                 <Button
                                     type="button"
@@ -124,50 +125,70 @@ export default function AddUserDialog({
                                     className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
                                     onClick={() => setShowPassword(!showPassword)}
                                 >
-                                    {showPassword ? 'Hide' : 'Show'}
+                                    {showPassword ? (
+                                        <EyeOff className="h-4 w-4" />
+                                    ) : (
+                                        <Eye className="h-4 w-4" />
+                                    )}
                                 </Button>
                             </div>
                         </div>
+
                         <div className="space-y-2">
-                            <div className="flex items-center space-x-2">
-                                <Checkbox
-                                    id="admin"
-                                    checked={formData.isAdmin}
-                                    onCheckedChange={(checked) =>
-                                        setFormData({ ...formData, isAdmin: checked as boolean })
-                                    }
-                                />
-                                <Label htmlFor="admin">Administrator</Label>
-                            </div>
-                            <div className="flex items-center space-x-2">
-                                <Checkbox
-                                    id="export"
-                                    checked={formData.canExportData}
-                                    onCheckedChange={(checked) =>
-                                        setFormData({ ...formData, canExportData: checked as boolean })
-                                    }
-                                />
-                                <Label htmlFor="export">Can export data</Label>
-                            </div>
-                            <div className="flex items-center space-x-2">
-                                <Checkbox
-                                    id="import"
-                                    checked={formData.canImportData}
-                                    onCheckedChange={(checked) =>
-                                        setFormData({ ...formData, canImportData: checked as boolean })
-                                    }
-                                />
-                                <Label htmlFor="import">Can import data</Label>
+                            <Label>Permissions</Label>
+                            <div className="space-y-2">
+                                <div className="flex items-center space-x-2">
+                                    <Checkbox
+                                        id="isAdmin"
+                                        checked={formData.isAdmin}
+                                        onCheckedChange={(checked) =>
+                                            setFormData({ ...formData, isAdmin: checked as boolean })
+                                        }
+                                    />
+                                    <Label htmlFor="isAdmin" className="font-medium">
+                                        Administrator
+                                    </Label>
+                                </div>
+                                <div className="flex items-center space-x-2">
+                                    <Checkbox
+                                        id="canExportData"
+                                        checked={formData.canExportData}
+                                        onCheckedChange={(checked) =>
+                                            setFormData({ ...formData, canExportData: checked as boolean })
+                                        }
+                                    />
+                                    <Label htmlFor="canExportData" className="font-medium">
+                                        Can export data
+                                    </Label>
+                                </div>
+                                <div className="flex items-center space-x-2">
+                                    <Checkbox
+                                        id="canImportData"
+                                        checked={formData.canImportData}
+                                        onCheckedChange={(checked) =>
+                                            setFormData({ ...formData, canImportData: checked as boolean })
+                                        }
+                                    />
+                                    <Label htmlFor="canImportData" className="font-medium">
+                                        Can import data
+                                    </Label>
+                                </div>
                             </div>
                         </div>
                     </div>
-                    <DialogFooter>
-                        <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
-                            Cancel
-                        </Button>
-                        <Button type="submit">Add user</Button>
-                    </DialogFooter>
-                </form>
+                </div>
+                <DialogFooter>
+                    <Button variant="outline" onClick={() => onOpenChange(false)}>
+                        Cancel
+                    </Button>
+                    <Button
+                        onClick={handleSubmit}
+                        disabled={!formData.name || !formData.email || !formData.password}
+                        className="button-primary"
+                    >
+                        Add User
+                    </Button>
+                </DialogFooter>
             </DialogContent>
         </Dialog>
     );

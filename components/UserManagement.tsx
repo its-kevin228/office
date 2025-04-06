@@ -4,25 +4,20 @@ import { useState, useEffect } from 'react';
 import { User } from '@/types/user';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Search, Filter, ChevronDown } from 'lucide-react';
+import { Search, Plus, Camera, Eye, EyeOff } from 'lucide-react';
 import {
     Dialog,
     DialogContent,
     DialogHeader,
     DialogTitle,
     DialogFooter,
+    DialogDescription,
 } from "@/components/ui/dialog";
 import { Checkbox } from "@/components/ui/checkbox";
-import {
-    DropdownMenu,
-    DropdownMenuContent,
-    DropdownMenuRadioGroup,
-    DropdownMenuRadioItem,
-    DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
 import UserTable from './UserTable';
 import AddUserDialog from './AddUserDialog';
 import ImageUpload from './ImageUpload';
+import { Label } from "@/components/ui/label";
 
 const ITEMS_PER_PAGE = 8;
 const STORAGE_KEY = 'user-management-data';
@@ -43,8 +38,6 @@ const initialUsers: User[] = [
     }
 ];
 
-type SortOption = 'alphabetical' | 'dateAdded' | 'admin' | 'none';
-
 export default function UserManagement() {
     const [searchQuery, setSearchQuery] = useState('');
     const [isAddUserOpen, setIsAddUserOpen] = useState(false);
@@ -54,8 +47,7 @@ export default function UserManagement() {
     const [isProfileOpen, setIsProfileOpen] = useState(false);
     const [isPermissionsOpen, setIsPermissionsOpen] = useState(false);
     const [isImageUploadOpen, setIsImageUploadOpen] = useState(false);
-    const [tempUserEdit, setTempUserEdit] = useState<Partial<User> | null>(null);
-    const [sortOption, setSortOption] = useState<SortOption>('none');
+    const [showPassword, setShowPassword] = useState(false);
 
     // Charger les données du localStorage au montage du composant
     useEffect(() => {
@@ -80,28 +72,9 @@ export default function UserManagement() {
         }
     }, [users]);
 
-    const sortUsers = (users: User[]): User[] => {
-        const sortedUsers = [...users];
-        switch (sortOption) {
-            case 'alphabetical':
-                return sortedUsers.sort((a, b) => a.name.localeCompare(b.name));
-            case 'dateAdded':
-                return sortedUsers.sort((a, b) => new Date(b.dateAdded).getTime() - new Date(a.dateAdded).getTime());
-            case 'admin':
-                return sortedUsers.sort((a, b) => {
-                    if (a.isAdmin === b.isAdmin) return 0;
-                    return a.isAdmin ? -1 : 1;
-                });
-            default:
-                return sortedUsers;
-        }
-    };
-
-    const filteredUsers = sortUsers(
-        users.filter(user =>
-            user.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-            user.email.toLowerCase().includes(searchQuery.toLowerCase())
-        )
+    const filteredUsers = users.filter(user =>
+        user.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        user.email.toLowerCase().includes(searchQuery.toLowerCase())
     );
 
     const totalPages = Math.ceil(filteredUsers.length / ITEMS_PER_PAGE);
@@ -150,30 +123,8 @@ export default function UserManagement() {
         const user = users.find(u => u.id === userId);
         if (user) {
             setSelectedUser(user);
-            setTempUserEdit(null);
             setIsProfileOpen(true);
         }
-    };
-
-    const handleUpdateProfile = (updatedInfo: Partial<User>) => {
-        setTempUserEdit(prev => ({ ...prev, ...updatedInfo }));
-    };
-
-    const handleSaveProfile = () => {
-        if (selectedUser && tempUserEdit) {
-            const updatedUser = { ...selectedUser, ...tempUserEdit };
-            setUsers(users.map(user =>
-                user.id === selectedUser.id ? updatedUser : user
-            ));
-            setSelectedUser(updatedUser);
-            setTempUserEdit(null);
-            setIsProfileOpen(false);
-        }
-    };
-
-    const handleImageUpload = (imageUrl: string) => {
-        handleUpdateProfile({ avatar: imageUrl });
-        setIsImageUploadOpen(false);
     };
 
     const handlePermissionsChange = (permissions: Partial<User>) => {
@@ -187,82 +138,56 @@ export default function UserManagement() {
         }
     };
 
-    return (
-        <div className="min-h-screen bg-gray-50/50">
-            <div className="container mx-auto px-4 py-8 max-w-7xl">
-                <div className="space-y-8">
-                    {/* Header Section */}
-                    <div className="bg-white p-6 rounded-lg shadow-sm">
-                        <h1 className="text-2xl font-semibold text-gray-900">User Management</h1>
-                        <p className="text-sm text-muted-foreground mt-1">
-                            Manage your team members and their account permissions here.
-                        </p>
-                    </div>
+    const handleUpdateUser = (updatedUser: User) => {
+        setUsers(users.map(user =>
+            user.id === updatedUser.id ? updatedUser : user
+        ));
+        setSelectedUser(updatedUser);
+        setIsProfileOpen(false);
+    };
 
-                    {/* Controls Section */}
-                    <div className="bg-white p-6 rounded-lg shadow-sm">
-                        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-                            <div className="text-sm text-muted-foreground">
-                                {filteredUsers.length} {filteredUsers.length === 1 ? 'user' : 'users'} total
-                            </div>
-                            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 w-full sm:w-auto">
-                                <div className="relative w-full sm:w-[250px]">
-                                    <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                                    <Input
-                                        placeholder="Search users..."
-                                        value={searchQuery}
-                                        onChange={(e) => {
-                                            setSearchQuery(e.target.value);
-                                            setCurrentPage(1);
-                                        }}
-                                        className="pl-9"
-                                    />
-                                </div>
-                                <div className="flex gap-3 w-full sm:w-auto">
-                                    <DropdownMenu>
-                                        <DropdownMenuTrigger asChild>
-                                            <Button variant="outline" className="flex-1 sm:flex-none whitespace-nowrap">
-                                                <Filter className="mr-2 h-4 w-4" />
-                                                {sortOption === 'none' ? 'Filters' :
-                                                    sortOption === 'alphabetical' ? 'A-Z' :
-                                                        sortOption === 'dateAdded' ? 'Recent first' :
-                                                            'Admins first'}
-                                                <ChevronDown className="ml-2 h-4 w-4" />
-                                            </Button>
-                                        </DropdownMenuTrigger>
-                                        <DropdownMenuContent align="end" className="w-[200px]">
-                                            <DropdownMenuRadioGroup value={sortOption} onValueChange={(value) => setSortOption(value as SortOption)}>
-                                                <DropdownMenuRadioItem value="none">No filter</DropdownMenuRadioItem>
-                                                <DropdownMenuRadioItem value="alphabetical">Alphabetical (A-Z)</DropdownMenuRadioItem>
-                                                <DropdownMenuRadioItem value="dateAdded">Date added (Recent first)</DropdownMenuRadioItem>
-                                                <DropdownMenuRadioItem value="admin">Access level (Admins first)</DropdownMenuRadioItem>
-                                            </DropdownMenuRadioGroup>
-                                        </DropdownMenuContent>
-                                    </DropdownMenu>
-                                    <Button
-                                        className="flex-1 sm:flex-none whitespace-nowrap"
-                                        onClick={() => setIsAddUserOpen(true)}
-                                    >
-                                        Add user
-                                    </Button>
-                                </div>
+    return (
+        <div className="min-h-screen bg-background">
+            <div className="container mx-auto px-4 py-8">
+                <div className="mb-8 space-y-2">
+                    <h1 className="text-3xl font-heading font-bold tracking-tight">User Management</h1>
+                    <p className="text-muted-foreground">Manage your team members and their account permissions here.</p>
+                </div>
+
+                <div className="card p-6 mb-6">
+                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                        <div className="flex-1">
+                            <div className="relative">
+                                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                                <input
+                                    type="text"
+                                    placeholder="Search users..."
+                                    value={searchQuery}
+                                    onChange={(e) => setSearchQuery(e.target.value)}
+                                    className="input pl-9 w-full sm:w-80"
+                                />
                             </div>
                         </div>
+                        <div className="flex gap-2">
+                            <Button onClick={() => setIsAddUserOpen(true)} className="button-primary">
+                                <Plus className="mr-2 h-4 w-4" />
+                                Add User
+                            </Button>
+                        </div>
                     </div>
+                </div>
 
-                    {/* Table Section */}
-                    <div className="bg-white rounded-lg shadow-sm overflow-hidden">
-                        <UserTable
-                            users={paginatedUsers}
-                            currentPage={currentPage}
-                            totalPages={totalPages}
-                            onPageChange={setCurrentPage}
-                            onDeleteUser={handleDeleteUser}
-                            onArchiveUser={handleArchiveUser}
-                            onUpdatePermissions={handleUpdatePermissions}
-                            onViewProfile={handleViewProfile}
-                        />
-                    </div>
+                <div className="card overflow-hidden">
+                    <UserTable
+                        users={paginatedUsers}
+                        currentPage={currentPage}
+                        totalPages={totalPages}
+                        onPageChange={setCurrentPage}
+                        onDeleteUser={handleDeleteUser}
+                        onArchiveUser={handleArchiveUser}
+                        onUpdatePermissions={handleUpdatePermissions}
+                        onViewProfile={handleViewProfile}
+                    />
                 </div>
             </div>
 
@@ -272,150 +197,207 @@ export default function UserManagement() {
                 onAddUser={handleAddUser}
             />
 
-            {/* Profile Dialog */}
             <Dialog open={isProfileOpen} onOpenChange={setIsProfileOpen}>
-                <DialogContent className="sm:max-w-[525px]">
+                <DialogContent className="dialog-content">
                     <DialogHeader>
-                        <DialogTitle>User Profile</DialogTitle>
+                        <DialogTitle className="text-xl font-heading">User Profile</DialogTitle>
+                        <DialogDescription>View and edit user information</DialogDescription>
                     </DialogHeader>
                     {selectedUser && (
-                        <div className="grid gap-6 py-4">
-                            <div className="flex items-start gap-4">
-                                <div className="relative group">
+                        <div className="space-y-6">
+                            <div className="flex flex-col items-center space-y-4">
+                                <div className="relative">
                                     <img
-                                        src={tempUserEdit?.avatar || selectedUser.avatar}
+                                        src={selectedUser.avatar}
                                         alt={selectedUser.name}
-                                        className="h-20 w-20 rounded-full object-cover"
+                                        className="h-24 w-24 rounded-full object-cover ring-4 ring-primary/10"
                                     />
-                                    <div className="absolute inset-0 flex items-center justify-center rounded-full bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity">
+                                    <Button
+                                        variant="outline"
+                                        size="icon"
+                                        className="absolute bottom-0 right-0 h-8 w-8 rounded-full"
+                                        onClick={() => setIsImageUploadOpen(true)}
+                                    >
+                                        <Camera className="h-4 w-4" />
+                                    </Button>
+                                </div>
+                                <div className="text-center">
+                                    <h3 className="text-lg font-medium">{selectedUser.name}</h3>
+                                    <p className="text-sm text-muted-foreground">{selectedUser.email}</p>
+                                </div>
+                            </div>
+
+                            <div className="space-y-4">
+                                <div>
+                                    <Label htmlFor="name">Name</Label>
+                                    <Input
+                                        id="name"
+                                        value={selectedUser.name}
+                                        onChange={(e) => handleUpdateUser({ ...selectedUser, name: e.target.value })}
+                                        className="input"
+                                    />
+                                </div>
+                                <div>
+                                    <Label htmlFor="email">Email</Label>
+                                    <Input
+                                        id="email"
+                                        type="email"
+                                        value={selectedUser.email}
+                                        onChange={(e) => handleUpdateUser({ ...selectedUser, email: e.target.value })}
+                                        className="input"
+                                    />
+                                </div>
+                                <div>
+                                    <Label htmlFor="password">Password</Label>
+                                    <div className="relative">
+                                        <Input
+                                            id="password"
+                                            type={showPassword ? "text" : "password"}
+                                            value={selectedUser.password}
+                                            onChange={(e) => handleUpdateUser({ ...selectedUser, password: e.target.value })}
+                                            className="input pr-10"
+                                        />
                                         <Button
+                                            type="button"
                                             variant="ghost"
                                             size="sm"
-                                            className="text-white hover:text-white hover:bg-transparent"
-                                            onClick={() => setIsImageUploadOpen(true)}
+                                            className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
+                                            onClick={() => setShowPassword(!showPassword)}
                                         >
-                                            Change
+                                            {showPassword ? (
+                                                <EyeOff className="h-4 w-4" />
+                                            ) : (
+                                                <Eye className="h-4 w-4" />
+                                            )}
                                         </Button>
                                     </div>
                                 </div>
-                                <div className="flex-1 space-y-4">
-                                    <div className="grid gap-2">
-                                        <label className="text-sm font-medium">Name</label>
-                                        <Input
-                                            value={tempUserEdit?.name ?? selectedUser.name}
-                                            onChange={(e) => handleUpdateProfile({ name: e.target.value })}
+                            </div>
+
+                            <div className="space-y-2">
+                                <Label>Permissions</Label>
+                                <div className="space-y-2">
+                                    <div className="flex items-center space-x-2">
+                                        <Checkbox
+                                            id="isAdmin"
+                                            checked={selectedUser.isAdmin}
+                                            onCheckedChange={(checked) =>
+                                                handleUpdateUser({ ...selectedUser, isAdmin: checked as boolean })
+                                            }
                                         />
+                                        <Label htmlFor="isAdmin" className="font-medium">
+                                            Administrator
+                                        </Label>
                                     </div>
-                                    <div className="grid gap-2">
-                                        <label className="text-sm font-medium">Email</label>
-                                        <Input
-                                            type="email"
-                                            value={tempUserEdit?.email ?? selectedUser.email}
-                                            onChange={(e) => handleUpdateProfile({ email: e.target.value })}
+                                    <div className="flex items-center space-x-2">
+                                        <Checkbox
+                                            id="canExportData"
+                                            checked={selectedUser.canExportData}
+                                            onCheckedChange={(checked) =>
+                                                handleUpdateUser({ ...selectedUser, canExportData: checked as boolean })
+                                            }
                                         />
+                                        <Label htmlFor="canExportData" className="font-medium">
+                                            Can export data
+                                        </Label>
+                                    </div>
+                                    <div className="flex items-center space-x-2">
+                                        <Checkbox
+                                            id="canImportData"
+                                            checked={selectedUser.canImportData}
+                                            onCheckedChange={(checked) =>
+                                                handleUpdateUser({ ...selectedUser, canImportData: checked as boolean })
+                                            }
+                                        />
+                                        <Label htmlFor="canImportData" className="font-medium">
+                                            Can import data
+                                        </Label>
                                     </div>
                                 </div>
                             </div>
-                            <div className="grid gap-4">
-                                <div className="flex items-center justify-between">
-                                    <div>
-                                        <p className="text-sm font-medium">Role</p>
-                                        <p className="text-sm text-gray-500">{selectedUser.isAdmin ? 'Administrator' : 'User'}</p>
-                                    </div>
-                                    <Button
-                                        variant="outline"
-                                        size="sm"
-                                        onClick={() => setIsPermissionsOpen(true)}
-                                    >
-                                        Manage permissions
-                                    </Button>
-                                </div>
-                                <div>
-                                    <p className="text-sm font-medium">Last active</p>
-                                    <p className="text-sm text-gray-500">{selectedUser.lastActive}</p>
-                                </div>
-                                <div>
-                                    <p className="text-sm font-medium">Member since</p>
-                                    <p className="text-sm text-gray-500">{selectedUser.dateAdded}</p>
-                                </div>
-                            </div>
-                            <DialogFooter>
-                                <Button
-                                    variant="outline"
-                                    onClick={() => {
-                                        setTempUserEdit(null);
-                                        setIsProfileOpen(false);
-                                    }}
-                                >
-                                    Cancel
-                                </Button>
-                                <Button
-                                    onClick={handleSaveProfile}
-                                    disabled={!tempUserEdit}
-                                >
-                                    Save changes
-                                </Button>
-                            </DialogFooter>
                         </div>
                     )}
+                    <DialogFooter>
+                        <Button variant="outline" onClick={() => setIsProfileOpen(false)}>
+                            Close
+                        </Button>
+                    </DialogFooter>
                 </DialogContent>
             </Dialog>
 
-            {/* Image Upload Dialog */}
             <Dialog open={isImageUploadOpen} onOpenChange={setIsImageUploadOpen}>
-                <DialogContent className="sm:max-w-[425px]">
+                <DialogContent className="dialog-content">
                     <DialogHeader>
-                        <DialogTitle>Change Profile Picture</DialogTitle>
-                    </DialogHeader>
-                    <div className="py-4">
-                        <ImageUpload
-                            currentImage={selectedUser?.avatar}
-                            onImageSelected={handleImageUpload}
-                        />
-                    </div>
-                </DialogContent>
-            </Dialog>
-
-            {/* Permissions Dialog */}
-            <Dialog open={isPermissionsOpen} onOpenChange={setIsPermissionsOpen}>
-                <DialogContent className="sm:max-w-[425px]">
-                    <DialogHeader>
-                        <DialogTitle>User Permissions</DialogTitle>
+                        <DialogTitle className="text-xl font-heading">Update Profile Picture</DialogTitle>
+                        <DialogDescription>Upload a new profile picture for the user</DialogDescription>
                     </DialogHeader>
                     {selectedUser && (
-                        <div className="grid gap-4 py-4">
-                            <div className="flex items-center space-x-2">
-                                <Checkbox
-                                    id="isAdmin"
-                                    checked={selectedUser.isAdmin}
-                                    onCheckedChange={(checked) =>
-                                        handlePermissionsChange({ isAdmin: !!checked })
-                                    }
-                                />
-                                <label htmlFor="isAdmin">Administrator</label>
-                            </div>
-                            <div className="flex items-center space-x-2">
-                                <Checkbox
-                                    id="canExportData"
-                                    checked={selectedUser.canExportData}
-                                    onCheckedChange={(checked) =>
-                                        handlePermissionsChange({ canExportData: !!checked })
-                                    }
-                                />
-                                <label htmlFor="canExportData">Can export data</label>
-                            </div>
-                            <div className="flex items-center space-x-2">
-                                <Checkbox
-                                    id="canImportData"
-                                    checked={selectedUser.canImportData}
-                                    onCheckedChange={(checked) =>
-                                        handlePermissionsChange({ canImportData: !!checked })
-                                    }
-                                />
-                                <label htmlFor="canImportData">Can import data</label>
+                        <ImageUpload
+                            onImageSelected={(imageUrl: string) => {
+                                handleUpdateUser({ ...selectedUser, avatar: imageUrl });
+                                setIsImageUploadOpen(false);
+                            }}
+                        />
+                    )}
+                </DialogContent>
+            </Dialog>
+
+            <Dialog open={isPermissionsOpen} onOpenChange={setIsPermissionsOpen}>
+                <DialogContent className="dialog-content">
+                    <DialogHeader>
+                        <DialogTitle className="text-xl font-heading">Manage Permissions</DialogTitle>
+                        <DialogDescription>Update user permissions and access levels</DialogDescription>
+                    </DialogHeader>
+                    {selectedUser && (
+                        <div className="space-y-4">
+                            <div className="space-y-2">
+                                <Label>Access Level</Label>
+                                <div className="space-y-2">
+                                    <div className="flex items-center space-x-2">
+                                        <Checkbox
+                                            id="isAdmin"
+                                            checked={selectedUser.isAdmin}
+                                            onCheckedChange={(checked) =>
+                                                handlePermissionsChange({ isAdmin: checked as boolean })
+                                            }
+                                        />
+                                        <Label htmlFor="isAdmin" className="font-medium">
+                                            Administrator
+                                        </Label>
+                                    </div>
+                                    <div className="flex items-center space-x-2">
+                                        <Checkbox
+                                            id="canExportData"
+                                            checked={selectedUser.canExportData}
+                                            onCheckedChange={(checked) =>
+                                                handlePermissionsChange({ canExportData: checked as boolean })
+                                            }
+                                        />
+                                        <Label htmlFor="canExportData" className="font-medium">
+                                            Can export data
+                                        </Label>
+                                    </div>
+                                    <div className="flex items-center space-x-2">
+                                        <Checkbox
+                                            id="canImportData"
+                                            checked={selectedUser.canImportData}
+                                            onCheckedChange={(checked) =>
+                                                handlePermissionsChange({ canImportData: checked as boolean })
+                                            }
+                                        />
+                                        <Label htmlFor="canImportData" className="font-medium">
+                                            Can import data
+                                        </Label>
+                                    </div>
+                                </div>
                             </div>
                         </div>
                     )}
+                    <DialogFooter>
+                        <Button variant="outline" onClick={() => setIsPermissionsOpen(false)}>
+                            Close
+                        </Button>
+                    </DialogFooter>
                 </DialogContent>
             </Dialog>
         </div>
